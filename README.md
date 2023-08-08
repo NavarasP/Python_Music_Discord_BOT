@@ -82,11 +82,11 @@ Follow these steps to set up and use the Discord Music Bot:
 
 ### 7. Playing Songs
 
-- To start playing songs from the queue, use the `@bot play` command.
+- To start playing songs from the queue, use the `@play` command.
 
 ### 8. Controlling Playback
 
-- Use the provided commands like `@bot pause`, `@bot resume`, `@bot skip`, and `@bot stop` to control the playback.
+- Use the provided commands like `@pause`, `@resume`, `@skip`, and `@stop` to control the playback.
 
 Remember to keep each bot token private and not share it with anyone. If your bot is in a public GitHub repository, use environment variables or a configuration file to store sensitive information securely.
 
@@ -95,13 +95,13 @@ By following these steps, you can create a functional Discord music bot, invite 
 ## Commands
 List all the available commands that users can use with your bot. For each command, provide a brief description of what it does and how to use it.
 
-@yourbot join: Join the voice channel.
-@yourbot add <search query>: Add a song to the queue.
-@yourbot play: Start playing songs from the queue.
-@yourbot pause: Pause the currently playing song.
-@yourbot resume: Resume playback of the paused song.
-@yourbot skip: Skip the current song.
-@yourbot stop: Stop the bot and disconnect from the voice channel.
+@join: Join the voice channel.
+@add <search query>: Add a song to the queue.
+@play: Start playing songs from the queue.
+@pause: Pause the currently playing song.
+@resume: Resume playback of the paused song.
+@skip: Skip the current song.
+@stop: Stop the bot and disconnect from the voice channel.
 ## Contributing
 Explain how other developers can contribute to your project. You can include guidelines for reporting issues, suggesting enhancements, or submitting pull requests.
 
