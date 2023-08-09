@@ -48,9 +48,6 @@ async def on_ready():
 
 @bot.command(name='join')
 async def join(ctx):
-    # global music_bot_channel_id
-    # if ctx.channel.id != music_bot_channel_id:
-    #     return
     
     if ctx.author.voice is None:
         await ctx.send("You are not in a voice channel.")
