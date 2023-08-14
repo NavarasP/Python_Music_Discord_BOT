@@ -5,9 +5,15 @@ import pytube
 from pytube import Playlist
 import asyncio
 import nextcord
+from nextcord.ui import View, Button
+import youtube_dl
+
+
+
 
 from nextcord.ext import commands
 import constants
+# import controls
 
 intents = nextcord.Intents.all()
 song_queue = Queue()
@@ -19,10 +25,74 @@ intents.voice_states = True
 intents.members = True
 intents.messages = True
 
+class MyView(View):
+    def __init__(self):
+        super().__init__()
+        self.play_button = Button(style=nextcord.ButtonStyle.green, emoji="⏯️", custom_id="play_pause")
+        self.next_button = Button(style=nextcord.ButtonStyle.green, emoji="⏭️", custom_id="stop")
+        self.stop_button = Button(style=nextcord.ButtonStyle.green, emoji="🛑", custom_id="next")
+        # self.Vup_button = Button(style=nextcord.ButtonStyle.green,  emoji="🔊", custom_id="volume_up")
+        # self.Vdn_button = Button(style=nextcord.ButtonStyle.green, emoji="🔉", custom_id="volume_down")
 
+        self.add_item(self.play_button)
+        self.add_item(self.stop_button)
+        self.add_item(self.next_button)
 
+    async def pause_resume_callback(self, interaction: nextcord.Interaction):
+        await interaction.response.defer()
+        await self.pause_resume_command(interaction)
 
+    async def stop_callback(self, interaction: nextcord.Interaction):
+        await interaction.response.defer()
+        await self.stop_command(interaction)
 
+    async def skip_callback(self, interaction: nextcord.Interaction):
+        await interaction.response.defer()
+        await self.skip_command(interaction)
+
+    async def pause_resume_command(self, interaction: nextcord.Interaction):
+        global is_playing
+        ctx = await bot.get_context(interaction.message)
+        if ctx.voice_client:
+            if ctx.voice_client.is_playing():
+                ctx.voice_client.pause()
+                await ctx.send("Playback paused.")
+                is_playing = True
+            elif ctx.voice_client.is_paused():
+                ctx.voice_client.resume()
+                await ctx.send("Playback resumed.")
+                is_playing = False
+
+    async def stop_command(self, interaction: nextcord.Interaction):
+        global is_playing
+        ctx = await bot.get_context(interaction.message)
+        if ctx.voice_client:
+            await ctx.voice_client.disconnect()
+            is_playing = False
+            await ctx.send("Playback stopped and bot disconnected.")
+
+    async def skip_command(self, interaction: nextcord.Interaction):
+        ctx = await bot.get_context(interaction.message)
+        if ctx.voice_client is not None and ctx.voice_client.is_playing():
+            ctx.voice_client.stop()
+            await ctx.send("Skipped the current song.")
+        else:
+            await ctx.send("No song is currently playing.")
+
+# def download_audio(video_url):
+#     options = {
+#         'format': 'bestaudio/best',
+#         'postprocessors': [{
+#             'key': 'FFmpegExtractAudio',
+#             'preferredcodec': 'mp3',
+#             'preferredquality': '192',
+#         }],
+#     }
+
+#     with youtube_dl.YoutubeDL(options) as ydl:
+#         info = ydl.extract_info(video_url, download=True)
+#         audio_file_path = info['title'] + '.mp3'
+#     return audio_file_path
 
 
 def download_audio(video_url):
@@ -60,7 +130,10 @@ async def join(ctx):
 
     voice_channel = ctx.author.voice.channel
     await voice_channel.connect()
+    
+    
     await ctx.send(f"I have joined the voice channel {voice_channel}.")
+
 
 
 async def add_to_queue(ctx,search_query):
@@ -101,49 +174,48 @@ async def add(ctx, *args):
         await ctx.send("Please provide a song name, search query, or playlist URL.")
         return
     search_query = " ".join(args)
-    add_to_queue(ctx,search_query)
+    await add_to_queue(ctx,search_query)
 
 
 
 async def play_songfrom_queue(ctx):
     global is_playing
-    while not song_queue.empty():
-            song = song_queue.get()
-            await ctx.send(f"Now playing: {song}")
-            is_playing = True
-            audio_file_path = download_audio(song)
-            ctx.voice_client.play(nextcord.FFmpegOpusAudio(audio_file_path), after=lambda e: print(f'Player error: {e}') if e else None)
-            while ctx.voice_client.is_playing():
-                await asyncio.sleep(1)
+    await join(ctx)
+    view = MyView()
+    await ctx.send("Click a button:", view=view)
 
-            delete_audio_file(audio_file_path)
-    is_playing = False
+    if song_queue.empty():
+        await ctx.send("The queue is empty. Use the `add` command to add songs to the queue.")
+        is_playing = False
+        return
+    else:
+        while not song_queue.empty():
+                song = song_queue.get()
+                await ctx.send(f"Now playing: {song}")
+                is_playing = True
+                audio_file_path = download_audio(song)
+                ctx.voice_client.play(nextcord.FFmpegOpusAudio(audio_file_path), after=lambda e: print(f'Player error: {e}') if e else None)
+                while ctx.voice_client.is_playing():
+                    await asyncio.sleep(1)
+
+                delete_audio_file(audio_file_path)
+        is_playing = False
 
 
 
 @bot.command(name='play', pass_context=True)
 async def play(ctx, *, args=""):
     global is_playing
-    if ctx.voice_client is None:
-        if ctx.author.voice is None:
-            await ctx.send("You are not in a voice channel.")
-            return
-        voice_channel = ctx.author.voice.channel
-        await voice_channel.connect()
-
+    print(args)
     if not args:
-        if song_queue.empty():
-            await ctx.send("The queue is empty. Use the `add` command to add songs to the queue.")
-            is_playing = False
-            return
-        else:
-            play_songfrom_queue(ctx)
+        await play_songfrom_queue(ctx)
+
             
     else:
         search_query = " ".join(args)
-        add_to_queue(ctx,search_query)
+        await add_to_queue(ctx,search_query)
         if not is_playing:
-            play_songfrom_queue(ctx)
+            await play_songfrom_queue(ctx)
         
         
 @bot.command(name='queue')
@@ -207,5 +279,14 @@ async def stop(ctx):
     await ctx.voice_client.disconnect()
     is_playing=False
  
+
+
+
+
+
+
+
+
+
 
 bot.run(constants.discordtocken)
